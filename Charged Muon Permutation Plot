@@ -57,7 +57,7 @@ for i in chain:
                                 histos[evenComb].Fill(sumTLor.M())
 
 # initialize ROOT canvas, legend, and colors
-canvas = ROOT.TCanvas('c1' ,'Muon Resonances (Even Num, Charge Neutral)')
+canvas = ROOT.TCanvas('c1' ,'Muon Resonances (Charged)')
 legend = ROOT.TLegend()
 colors = [ROOT.kRed, ROOT.kBlue, ROOT.kGreen, ROOT.kMagenta, ROOT.kOrange, ROOT.kCyan, ROOT.kViolet, ROOT.kBlack]
 
