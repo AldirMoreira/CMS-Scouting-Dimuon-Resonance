@@ -2,7 +2,7 @@
 # the invariant mass of these products is plotted on the x-axis using 1D Histograms per amount of muons in a given permutation
 
 import ROOT
-# the import below might be unnecessary, I haven't tested it
+# the import below might be unnecessary
 from ROOT.Math import PtEtaPhiMVector
 from itertools import combinations
 
