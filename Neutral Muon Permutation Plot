@@ -1,0 +1,88 @@
+# this code looks at a set of muon producing events to find all permutations that produced products with no net charge
+# the invariant mass of these products is plotted on the x-axis using 1D Histograms per amount of muons in a given permutation
+
+import ROOT
+# the import below might be unnecessary
+from ROOT.Math import PtEtaPhiMVector
+from itertools import combinations
+
+# find all files with a tree name and add them to a ROOT chain 
+chain = ROOT.TChain('Events')
+chain.Add('ScoutingMu_*.root')
+
+# initialize 1D histograms
+histos = {}
+
+# extract individual event values from each branch in each file
+for i in chain:
+        pt = i.ScoutingMuon_pt
+        eta = i.ScoutingMuon_eta
+        phi = i.ScoutingMuon_phi
+        charge = i.ScoutingMuon_charge
+
+        # base number of muons read on number of momenta obtained in event
+        muCount = len(pt)
+
+        # initialize muons
+        muons = []
+
+        # calculate the TLorentz vector of every muon in an event
+        for val in range(muCount):
+
+                tLor = ROOT.Math.PtEtaPhiMVector(pt[val], eta[val], phi[val], .10566)
+
+                # add TLorentz vector information to muons list
+                muons.append((tLor, charge[val]))
+
+        # call every possible even number of muons that fits in the amount of muons in a given event
+        for evenComb in range(2, muCount+1, 2):
+
+                # add 1D histogram if even combination is not already present
+                if evenComb not in histos:
+                        histos[evenComb] = ROOT.TH1F(f"h{evenComb}", f"{evenComb} Dimuon mass", 200, 0, 200)
+
+                # use itertools to run through permutations in every even number group
+                for comb in combinations(muons, evenComb):
+
+                        # check net charge and continue if it is neutral
+                        sumCharge = sum(q for _, q in comb)
+                        if sumCharge == 0:
+
+                                # initialize summed TLorentz vector
+                                sumTLor = PtEtaPhiMVector()
+
+                                # add all TLorentz vectors in a single permutation and use .M() to find invariant mass, second element doesn't matter
+                                for tLor, _ in comb:
+                                        sumTLor += tLor
+                                histos[evenComb].Fill(sumTLor.M())
+
+# initialize ROOT canvas, legend, and colors
+canvas = ROOT.TCanvas('c1' ,'Muon Resonances (Even Num, Charge Neutral)')
+legend = ROOT.TLegend()
+colors = [ROOT.kRed, ROOT.kBlue, ROOT.kGreen, ROOT.kMagenta, ROOT.kOrange, ROOT.kCyan, ROOT.kViolet, ROOT.kBlack]
+
+# set colors of individual 1D histograms based on permutations with the same number of muons
+binary = True
+for i, evenComb in enumerate(sorted(histos)):
+
+        individual = histos[evenComb]
+
+        color = colors[i%len(colors)]
+        individual.SetLineColor(color)
+        individual.SetLineWidth(2)
+
+        if binary:
+                individual.Draw("HIST")
+                binary = False
+        else:
+             # overlay histogram if it already exists
+             	individual.Draw("HIST SAME")
+
+        # fill out legend
+        legend.AddEntry(individual, f"{nmu} muons", 'l')
+
+legend.Draw()
+canvas.Update()
+
+# use to stop figure from closing instantly (does lead to X11 authentication issue)
+ROOT.gApplication.Run()
