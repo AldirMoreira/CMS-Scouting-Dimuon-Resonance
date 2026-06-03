@@ -79,7 +79,7 @@ for i, evenComb in enumerate(sorted(histos)):
              	individual.Draw("HIST SAME")
 
         # fill out legend
-        legend.AddEntry(individual, f"{nmu} muons", 'l')
+        legend.AddEntry(individual, f"{evenComb} muons", 'l')
 
 legend.Draw()
 canvas.Update()
