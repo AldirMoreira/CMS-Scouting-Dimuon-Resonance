@@ -1,0 +1,86 @@
+#################################################
+
+import ROOT
+import os
+
+ROOT.EnableImplicitMT()
+#ROOT.gROOT.SetBatch(ROOT.kTRUE)
+ROOT.gStyle.SetOptStat(0)
+
+filesPath = os.path.expanduser('~/reu2026/plottingTest')
+ROOT.gInterpreter.Declare(f'#include "{filesPath}/RDF_Functions.h"')
+
+T = ROOT.TChain('Events')
+
+scoutingPath = os.path.expanduser('/cms/cephfs/data/store/user/mosherso/')
+
+for path, subdirs, files in os.walk(scoutingPath):
+
+	for part in files:
+		partPath = os.path.join(path, part)
+
+		if (partPath.endswith('root') and os.path.getsize(partPath) > 100 and part not in {'ScoutingMu_567.root'}):
+
+			print(partPath)
+			T.Add(partPath)
+
+nMuonMax = 2
+
+df = ROOT.RDataFrame(T)
+ROOT.RDF.Experimental.AddProgressBar(df)
+
+histos = {}
+
+for N in range(2, nMuonMax + 1, 2):
+	col = f"mass_{N}mu"
+
+	group = (df.Filter(f"(int)ScoutingMuon_pt.size() >= {N}", f"Greater than {N} muons")
+	.Define(col, f"neutralCombMasses(ScoutingMuon_pt, ScoutingMuon_eta," f" ScoutingMuon_phi, ScoutingMuon_charge, {N})")
+	.Filter(f"!{col}.empty()", f"Has {N} muons"))
+
+	histos[N] = group.Histo1D((f"h{N}mu", f"{N} muon mass [GeV]; Events", 300, 0.4, 100), col)
+
+for h in histos.values():
+	h.GetValue()
+
+colors = [ROOT.kRed, ROOT.kBlue, ROOT.kGreen, ROOT.kMagenta, ROOT.kOrange, ROOT.kCyan, ROOT.kViolet, ROOT.kBlack]
+
+canvas = ROOT.TCanvas('c1', 'Dimuon Resonances from CMS Scouting Data')
+
+legend = ROOT.TLegend()
+
+# for color picking below
+bool = True
+
+for i, N in enumerate(sorted(histos)):
+	h = histos[N]
+	color = colors[i%len(colors)]
+	h.SetLineColor(color)
+	h.Draw("HIST" if bool else "HIST SAME")
+	legend.AddEntry(h.GetPtr(), f"{N} muons", 'l')
+	bool = False
+
+######legend.Draw()
+h.SetTitle('Reconstructed Scouting Dimuon Resonances')
+h.GetXaxis().SetTitle("m_{#mu^{+}#mu^{-}} [GeV/c^{2}]")
+h.GetXaxis().SetTitleSize(0.045)
+h.GetYaxis().SetTitle('Events/GeV')
+h.GetYaxis().SetTitleSize(0.045)
+
+# resonance labels
+label = ROOT.TLatex()
+label.SetTextSize(0.04)
+label.DrawLatex(86.5,1.5e6,"Z")
+label.DrawLatex(9.5,6e7,"#psi'")
+label.DrawLatex(2.7,1.5e8, "J/#psi")
+label.DrawLatex(1, 1.3e8, "#phi")
+
+canvas.SetLogx()
+canvas.SetLogy()
+canvas.Update()
+
+
+
+report = df.Report()
+report.Print()
+ROOT.gApplication.Run()
